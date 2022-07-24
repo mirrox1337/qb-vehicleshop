@@ -19,44 +19,53 @@ local rgbSecondaryColorSelected = {255,255,255,}
 
 local QBCore = exports['qb-core']:GetCoreObject()
 
-Citizen.CreateThread(function ()
+CreateThread(function ()
 	while QBCore == nil do
 		TriggerEvent('QBCore:GetObject', function(obj) QBCore = obj end)
 		Citizen.Wait(200)
 	end
 end)
 
-Citizen.CreateThread(function()
-    while true do
-        Citizen.Wait(3)
-        local ped = PlayerPedId()
-        local sleep = true
-        for i = 1, #Config.Shops do
-        local actualShop = Config.Shops[i].coords
-        local dist = #(actualShop - GetEntityCoords(ped))
-            if dist <= 5 then
-                sleep = false
-                DrawMarker(2, actualShop.x, actualShop.y, actualShop.z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.25, 0.2, 0.1, 255, 0, 0, 155, 0, 0, 0, 1, 0, 0, 0)
-                if dist <= 2.5 then
-                    DrawText3Ds(actualShop.x, actualShop.y, actualShop.z + 0.2, '[~g~E~w~] - Browse Vehicle Shop')
-                    if IsControlJustPressed(0, 38) then
-                        vehcategory = Config.Shops[i].category
-                        cameracoords = Config.Shops[i].cameracoords
-                        pointcamera = Config.Shops[i].pointcamera
-                        spawnvehicle = Config.Shops[i].spawnvehicle
-                        buyspawn = Config.Shops[i].buyspawn
-                        testdrive = Config.Shops[i].testdrive
-                        OpenVehicleShop()
-                    end
-                end
+CreateThread(function()
+    for k, v in pairs(Config.Shops) do
+        local boxZone = BoxZone:Create(v.coords, v.length, v.width, {
+            name="Vehicleshop"..k,
+            debugPoly = false,
+            heading = v.heading,
+            minZ = v.minZ,
+            maxZ = v.maxZ,
+        })
+        boxZone:onPlayerInOut(function(isPointInside)
+            if isPointInside  then
+                exports['qb-core']:DrawText(('[E] Bläddra i Fordonsbutik'), 'left')
+                vehcategory = v.category
+                cameracoords = v.cameracoords
+                pointcamera = v.pointcamera
+                spawnvehicle = v.spawnvehicle
+                buyspawn = v.buyspawn
+                testdrive = v.testdrive
+                openShop(k)
+            else
+                CheckVehicle = false
+                exports['qb-core']:HideText()
             end
-        end
-        if sleep then
-            Wait(500)
-        end
+        end)
     end
 end)
 
+function openShop(k)
+    CheckVehicle = true
+    CreateThread(function()
+        while CheckVehicle do
+            if IsControlJustPressed(0, 38) then
+                exports['qb-core']:KeyPressed(38)
+                CheckVehicle = false
+                OpenVehicleShop()
+                end
+            Wait(1)
+        end
+    end)
+end
 
 RegisterNetEvent('qb-vehicleshop.receiveInfo')
 AddEventHandler('qb-vehicleshop.receiveInfo', function(bank, name)
